@@ -2,8 +2,12 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 
-import JsendResponse from './middlewares/jsendResponse';
+import JsendResponse from './managers/middlewares/jsendResponse';
 import clientRoutes from './routes/client.routes';
+import coachRoutes from './routes/coach.routes';
+import dietPlanRoutes from './routes/dietPlan.routes';
+import ingredientRoutes from './routes/ingredient.routes';
+import mealRoutes from './routes/meal.routes';
 import workoutRoutes from './routes/workout.routes';
 
 
@@ -24,6 +28,10 @@ export default class Server {
 
     this.app
     .use('/api/clients', clientRoutes)
+    .use('/api/coaches', coachRoutes)
+    .use('/api/diet-plans', dietPlanRoutes)
+    .use('/api/ingredients', ingredientRoutes)
+    .use('/api/meals', mealRoutes)
     .use('/api/workouts', workoutRoutes)
   };
 

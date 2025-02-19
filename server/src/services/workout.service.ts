@@ -1,53 +1,76 @@
-import { Workout, UpdatedWorkout } from '../types';
+import { Workout, UpdatedWorkout } from '@/types';
+import WorkoutModel, { WorkoutDocument } from '@/database/models/workout.model';
+import mongoose from 'mongoose';
+import HttpError from '@/managers/responses/http-error';
 
 export default class WorkoutService {
-  // mock db
-  private static workouts: Workout[] = [];
-
-  public static getAllWorkouts(): Workout[] {
-    return this.workouts;
-  }
-
-  public static getWorkoutById(id: string): Workout | undefined {
-    return this.workouts.find(workout => workout.id === id);
-  }
-
-  public static createWorkout(workoutData: Workout): Workout {
-    const newWorkout: Workout = {
-      ...workoutData,
-      id: Date.now().toString(), // for now
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    this.workouts.push(newWorkout);
-    return newWorkout;
-  }
-
-  public static updateWorkout(id: string, updateData: UpdatedWorkout): Workout | null {
-    const workoutIndex = this.workouts.findIndex(workout => workout.id === id);
-
-    if (workoutIndex === -1) {
-      return null;
+  public static async getAllWorkouts(): Promise<Workout[]> {
+    try {
+      const workouts = await WorkoutModel.find().lean();
+      return workouts.map(this.mapWorkoutDocument);
+    } catch (error) {
+      throw new HttpError(500, 'Failed to fetch workouts');
     }
-
-    this.workouts[workoutIndex] = {
-      ...this.workouts[workoutIndex],
-      ...updateData,
-      updatedAt: new Date()
-    };
-
-    return this.workouts[workoutIndex];
   }
 
-  public static deleteWorkout(id: string): boolean {
-    const workoutIndex = this.workouts.findIndex(workout => workout.id === id);
-
-    if (workoutIndex === -1) {
-      return false;
+  public static async getWorkoutById(id: string): Promise<Workout> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, 'Invalid workout ID');
     }
+    const workout = await WorkoutModel.findById(id).lean();
+    if (!workout) {
+      throw new HttpError(404, 'Workout not found');
+    }
+    return this.mapWorkoutDocument(workout);
+  }
 
-    this.workouts.splice(workoutIndex, 1);
-    return true;
+  public static async createWorkout(workoutData: Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workout> {
+    try {
+      const newWorkout = new WorkoutModel(workoutData);
+      const savedWorkout = await newWorkout.save();
+      return this.mapWorkoutDocument(savedWorkout);
+    } catch (error) {
+      throw new HttpError(400, 'Failed to create workout');
+    }
+  }
+
+  public static async updateWorkout(id: string, updateData: UpdatedWorkout): Promise<Workout> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, 'Invalid workout ID');
+    }
+    const updatedWorkout = await WorkoutModel.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    ).lean();
+    if (!updatedWorkout) {
+      throw new HttpError(404, 'Workout not found');
+    }
+    return this.mapWorkoutDocument(updatedWorkout);
+  }
+
+  public static async deleteWorkout(id: string): Promise<void> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError(400, 'Invalid workout ID');
+    }
+    const result = await WorkoutModel.findByIdAndDelete(id);
+    if (!result) {
+      throw new HttpError(404, 'Workout not found');
+    }
+  }
+
+  private static mapWorkoutDocument(workout: WorkoutDocument): Workout {
+    return {
+      id: workout.id.toString(),
+      name: workout.name,
+      description: workout.description,
+      clientsId: workout.clientsId?.map(id => id.toString()),
+      duration: workout.duration,
+      intensity: workout.intensity,
+      muscleGroups: workout.muscleGroups,
+      date: workout.date,
+      createdAt: workout.createdAt,
+      updatedAt: workout.updatedAt
+    };
   }
 }

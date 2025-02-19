@@ -5,7 +5,7 @@ import {
   updateWorkout, 
   deleteWorkout,
   getWorkoutById
-} from '../controllers/workout.controller';
+} from '@/controllers/workout.controller';
 
 const router = Router();
 

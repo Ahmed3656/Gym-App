@@ -1,48 +1,53 @@
-import { Request, Response } from 'express';
-import { Client, UpdatedClient } from '../types';
-import ClientService from '../services/client.service';
+import { Request, Response, NextFunction } from 'express';
+import ClientService from '@/services/client.service';
+import { Client, UpdatedClient } from '@/types';
 
-export const getClientById = (req: Request, res: Response) => {
-  const { id } = req.params;
-  const client = ClientService.getClientById(id);
-
-  if (!client) res.jsend.fail({ client: 'Client not found' }, 404);
-
-  res.jsend.success(client);
-};
-
-export const createClient = (req: Request, res: Response) => {
+export const getAllClients = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const clientData: Client = req.body;
-    const newClient = ClientService.createClient(clientData);
-
-    res.jsend.success(newClient, 201);
+    const clients = await ClientService.getAllClients();
+    res.jsend.success(clients);
   } catch (error) {
-    res.jsend.error(error instanceof Error ? error.message : 'Error creating client');
+    next(error);
   }
 };
 
-export const updateClient = (req: Request, res: Response) => {
-  const { id } = req.params;
-  const updateData: UpdatedClient = req.body;
-
-  const updatedClient = ClientService.updateClient(id, updateData);
-
-  if (!updatedClient) res.jsend.fail({ client: 'Client not found' }, 404);
-
-  res.jsend.success(updatedClient);
+export const getClientById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const client = await ClientService.getClientById(id);
+    res.jsend.success(client);
+  } catch (error) {
+    next(error);
+  }
 };
 
-export const getAllClients = (req: Request, res: Response) => {
-  const clients = ClientService.getAllClients();
-  res.jsend.success(clients);
+export const createClient = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const clientData: Omit<Client, 'id' | 'createdAt' | 'updatedAt'> = req.body;
+    const newClient = await ClientService.createClient(clientData);
+    res.jsend.success(newClient, 201);
+  } catch (error) {
+    next(error);
+  }
 };
 
-export const deleteClient = (req: Request, res: Response) => {
-  const { id } = req.params;
-  const isDeleted = ClientService.deleteClient(id);
+export const updateClient = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const updateData: UpdatedClient = req.body;
+    const updatedClient = await ClientService.updateClient(id, updateData);
+    res.jsend.success(updatedClient);
+  } catch (error) {
+    next(error);
+  }
+};
 
-  if (!isDeleted)  res.jsend.fail({ client: 'Client not found' }, 404);
-
-  res.jsend.success("Client deleted succesfully", 204);
+export const deleteClient = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await ClientService.deleteClient(id);
+    res.jsend.success(null, 204);
+  } catch (error) {
+    next(error);
+  }
 };
